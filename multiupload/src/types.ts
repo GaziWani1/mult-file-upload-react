@@ -32,8 +32,13 @@ type ProgressBarProp = {
 	progress: number;
 };
 
+type ActionButtonProp = {
+    disabled : boolean;
+    onUpload : () => void;
+    onClear : () => void
+}
 
 
 export type {
-    FileWithProgess , ProgressBarProp , FileItemProps , FileListProps , FileInputProps
+    FileWithProgess , ProgressBarProp , FileItemProps , FileListProps , FileInputProps , ActionButtonProp
 }

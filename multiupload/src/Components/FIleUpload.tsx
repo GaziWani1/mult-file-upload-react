@@ -5,14 +5,23 @@ import {
 	FileText,
 	FileVideo,
 	Plus,
-  X,
+	Upload,
+	X,
 } from 'lucide-react';
 import {
 	useRef,
 	useState,
 	type ChangeEvent,
 } from 'react';
-import type { FileInputProps, FileItemProps, FileListProps, FileWithProgess, ProgressBarProp } from '../types';
+import type {
+	ActionButtonProp,
+	FileInputProps,
+	FileItemProps,
+	FileListProps,
+	FileWithProgess,
+	ProgressBarProp,
+} from '../types';
+import axios from 'axios';
 
 const FIleUpload = () => {
 	const [files, setFiles] = useState<
@@ -50,6 +59,42 @@ const FIleUpload = () => {
 		);
 	}
 
+
+	function handleClear() {
+    setFiles([])
+  }
+
+  async function handleUpload() {
+    if (!files?.length || uploading) return;
+    setUploading(true);
+
+    const uploadPromises = files.map(async (fileWithProgess) => {
+       const formData = new FormData();
+       formData.append('file' , fileWithProgess.file);
+
+       try {
+         await axios.post(`https://httpbin.org/post` , formData , {
+           onUploadProgress :(progressEvent) => {
+              const progress = Math.round(
+                (progressEvent.loaded * 100) / (progressEvent.total || 1)
+              );
+              setFiles((prevFiles) => prevFiles.map(file => file.id === fileWithProgess.id  ? {...file , progress} : file ))
+           }
+         });
+
+           setFiles((prevFiles) => prevFiles.map(file => file.id === fileWithProgess.id  ? {...file , uploaded : true} : file ))
+
+       } catch (error) {
+        console.error(error)
+       }
+    });
+
+    await Promise.all(uploadPromises);
+
+    setUploading(false);
+
+  }
+
 	return (
 		<div className="flex flex-col  gap-4 p-7">
 			<h2 className="text-xl font-bold text-white">
@@ -60,6 +105,13 @@ const FIleUpload = () => {
 					inputRef={inputRef}
 					disabled={uploading}
 					onFileSelect={handleFileSelect}
+				/>
+				<ActionButtons
+					disabled={
+						files.length === 0 || uploading
+					}
+					onUpload={handleUpload}
+					onClear={handleClear}
 				/>
 			</div>
 			<FileList
@@ -72,7 +124,6 @@ const FIleUpload = () => {
 };
 
 export default FIleUpload;
-
 
 function FileInput({
 	inputRef,
@@ -99,7 +150,6 @@ function FileInput({
 	);
 }
 
-
 function FileList({
 	files,
 	onRemove,
@@ -124,7 +174,6 @@ function FileList({
 		</div>
 	);
 }
-
 
 function FileItem({
 	file,
@@ -152,20 +201,27 @@ function FileItem({
 							{file.file.type || 'Unknown type'}
 						</span>
 					</div>
-          {!uploading && <button className=' cursor-pointer' onClick={() => onRemove(file.id)}>
-            <X size={20} className="text-white" />
-          </button>}
+					{!uploading && (
+						<button
+							className=" cursor-pointer"
+							onClick={() => onRemove(file.id)}>
+							<X
+								size={20}
+								className="text-white"
+							/>
+						</button>
+					)}
 				</div>
-        
 			</div>
-      <div className='text-white self-end'>
-        {file.uploaded ? 'Compeleted' : `${Math.round(file.progress)}%`}
-      </div>
-      <ProgressBar progress={file.progress} />
+			<div className="text-white self-end">
+				{file.uploaded
+					? 'Compeleted'
+					: `${Math.round(file.progress)}%`}
+			</div>
+			<ProgressBar progress={file.progress} />
 		</div>
 	);
 }
-
 
 function ProgressBar({
 	progress,
@@ -178,6 +234,31 @@ function ProgressBar({
 					width: `${progress}%`,
 				}}></div>
 		</div>
+	);
+}
+
+function ActionButtons({
+	onUpload,
+	onClear,
+	disabled,
+}: ActionButtonProp) {
+	return (
+		<>
+			<button
+				onClick={onUpload}
+				disabled={disabled}
+				className="flex bg-sky-400 text-white rounded-sm px-3 items-center gap-2">
+				<Upload size={18} />
+				Upload
+			</button>
+			<button
+				onClick={onClear}
+				disabled={disabled}
+				className=" bg-red-400 text-white rounded-sm px-3 flex items-center gap-2">
+				<Upload size={18} />
+				Clear All
+			</button>
+		</>
 	);
 }
 
